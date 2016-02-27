@@ -194,7 +194,7 @@ public class Worm : MonoBehaviour {
         {
             head.transform.LookAt(head.transform.position + rb.velocity, up);
             headRotation -= h_input * 2f;
-            if(depth > -60 && x_input)
+            if(depth > -transform.localScale.x * 20 && x_input && Mathf.Abs(h_input) <= 0.5f)
                 headRotation += 35 * Mathf.Sin(Time.time * 5) / (Mathf.Sqrt(vel.x * vel.x + vel.z * vel.z) / minGroundSpeed);
             head.transform.Rotate(new Vector3(headRotation, 90, 90));
             quatHead = head.transform.rotation;
