@@ -14,20 +14,23 @@ public class Worm : MonoBehaviour {
     public GameObject bodyPartPrefab;
     public List<GameObject> bodyParts;
 
-    public float groundSpeed;
     public float minGroundSpeed;
+    public float groundSpeedX;
+    public float groundSpeedNormal;
     public float airSpeed;
     public float frequencyMult;
     public float time = 0;
     public float ySpeedMax = 1000;
     public float ySpeedMin = -500;
-    public float headRotationAmountOnKeyPress = 90; //Degrees
+    //public float headRotationAmountOnKeyPress = 90; //Degrees
+    public float headRotation = 0;
 
     public GameObject target;
     public GameObject planet;
     public GameObject debugSphere;
 
     /* Updated every frame */
+    public float groundSpeed;
     public Vector3? epicenter;         //Position of the worm on the planet's surface.
     public float? dEpicenter;          //Distance from the center of the planet to the surface at the position of the worm.
     public float dCenter;              //Distance from center of the planet to the worm.
@@ -110,19 +113,23 @@ public class Worm : MonoBehaviour {
 
         float h_input = Input.GetAxis("Horizontal");
         float v_input = Input.GetAxis("Vertical");
+        bool z_input = Input.GetKey(KeyCode.Z);
+        bool x_input = Input.GetKey(KeyCode.X);
 
         vel.z = Utils.sign(vel.z + v_input, false) * Mathf.Max(Mathf.Min(Mathf.Abs(vel.z + v_input), groundSpeed), minGroundSpeed);
         vel.x += (Utils.sign(h_input) * 12 * (Mathf.Abs(vel.z) / groundSpeed) - vel.x) * 0.15f;
+        //vel.x += 0.5f * Mathf.Sin(Time.time * Mathf.Sqrt(vel.x * vel.x + vel.z * vel.z) / minGroundSpeed);
 
 
         if (underground)
         {
-            if (Input.GetKey(KeyCode.Z) && vel.y > 0)
+            if (z_input)
             {
-                vel.y += 500 * Time.deltaTime;
+                if(vel.y > 0)
+                    vel.y += 750 * Time.deltaTime;
             }
 
-            vel.y -= (depthTo - depth) * 0.5f;
+            vel.y -= (depthTo - depth) * 0.25f;
             //If the player is slowing down, slow the worm's vertical movement
             if (vel.y < 0)
             {
@@ -134,12 +141,21 @@ public class Worm : MonoBehaviour {
         {
             vel.y -= gravityValue;
         }
-        if (Input.GetKey(KeyCode.X) && vel.y > 0)
+        if (x_input && vel.y > 0)
         {
             if (vel.y > 100)
                 vel.y *= 0.75f;
             else
                 vel.y *= 0.99f;
+        }
+
+        if(x_input)
+        {
+            groundSpeed = groundSpeedX;
+        }
+        else
+        {
+            groundSpeed = groundSpeedNormal;
         }
 
         if (underground && vel.y < ySpeedMin)
@@ -166,7 +182,10 @@ public class Worm : MonoBehaviour {
 
         float _nVelY = Mathf.Pow(Mathf.Max(-depth, 0)/100f, 0.1f);
         nVelY = Mathf.Sin(Mathf.Max(-depth, 0) / 100f * Mathf.PI / 2);// += Utils.sign(_nVelY - nVelY) * 0.001f;
-        Camera.main.transform.position += (transform.position + right * cameraSideToSideMult * nVelY + up * 400 - forward * 300 - Camera.main.transform.position) * 0.05f;
+        var origin = transform.position;
+        if (underground && epicenter.HasValue)
+            origin = epicenter.Value;
+        Camera.main.transform.position += (origin + right * cameraSideToSideMult * nVelY + up * 400 - forward * (100 + 25 * Mathf.Sqrt(vel.x * vel.x + vel.z * vel.z) / minGroundSpeed) - Camera.main.transform.position) * 0.05f;
         Camera.main.transform.LookAt(transform.position, up);
         
 
@@ -174,9 +193,15 @@ public class Worm : MonoBehaviour {
         if (rb.velocity.sqrMagnitude > 1)
         {
             head.transform.LookAt(head.transform.position + rb.velocity, up);
+            headRotation -= h_input * 2f;
+            if(depth > -60 && x_input)
+                headRotation += 35 * Mathf.Sin(Time.time * 5) / (Mathf.Sqrt(vel.x * vel.x + vel.z * vel.z) / minGroundSpeed);
+            head.transform.Rotate(new Vector3(headRotation, 90, 90));
             quatHead = head.transform.rotation;
-            head.transform.Rotate(new Vector3(headRotationAmountOnKeyPress * h_input, 90, 90));
         }
+        headRotation %= 360;
+        headRotation += Utils.angleDiffDeg(headRotation, 0) * 0.03f;
+
         quaternions.Add(quatHead);
         positions.Add(transform.position);
         
@@ -194,7 +219,7 @@ public class Worm : MonoBehaviour {
             var n = i * 1.0f / (nBodyParts - 1);
             n = 1 - Defilter(n);
             bodyParts[i].transform.position = GetPositionAlongPath(1 - n * bodyPercent * stretchMult - startOffset);
-            bodyParts[i].transform.rotation = GetQuaternionAlongPath(1 - n * bodyPercent * stretchMult - startOffset);
+            bodyParts[i].transform.rotation = GetQuaternionAlongPath(1 - n * bodyPercent * stretchMult - startOffset) * Quaternion.Euler(new Vector3(-90, -90, 0));
         }
         for(int i = 0; i < positions.Count-1; i++)
         {

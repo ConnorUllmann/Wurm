@@ -22,6 +22,15 @@ public class Utils : MonoBehaviour {
 
         return diff;
     }
+    public static float angleDiffDeg(float a, float b)
+    {
+        var diff = b - a;
+
+        while (diff > 180) { diff -= 360; }
+        while (diff <= -180) { diff += 360; }
+
+        return diff;
+    }
 
     public static int sign(float x, bool canReturnZero = true)
     {
