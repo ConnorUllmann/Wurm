@@ -26,7 +26,6 @@ public class Worm : MonoBehaviour {
     public float headRotation = 0;
 
     public GameObject target;
-    public GameObject planet;
     public GameObject debugSphere;
 
     /* Updated every frame */
@@ -123,7 +122,7 @@ public class Worm : MonoBehaviour {
     //Returns the quaternion used to take local space coordinates and convert to world space.
     void OrientSelf()
     {
-        diff = transform.position - planet.transform.position;
+        diff = transform.position - PlanetObj.S.transform.position;
         up = diff.normalized;
         dCenter = diff.magnitude;
         facing = rb.velocity.normalized;
@@ -131,12 +130,12 @@ public class Worm : MonoBehaviour {
         right = Vector3.Cross(up, facing);
         quatUp = Quaternion.LookRotation(forward, up);
 
-        RaycastHit? hitInfo = GetEpicenter();
+        RaycastHit? hitInfo = PlanetObj.GetEpicenter(transform.position);
         if (hitInfo != null)
         {
             epicenter = hitInfo.Value.point;
             normal = hitInfo.Value.normal;
-            dEpicenter = (epicenter.Value - planet.transform.position).magnitude;
+            dEpicenter = (epicenter.Value - PlanetObj.S.transform.position).magnitude;
         }
     }
 
@@ -306,26 +305,15 @@ public class Worm : MonoBehaviour {
 
     void OnTriggerEnter(Collider c)
     {
-        Debug.Log(c.gameObject.name + " hit!");
+        Debug.Log(c.gameObject.name + " hit! " + c.gameObject.tag);
         if(c.gameObject.tag == "Enemy")
         {
             c.gameObject.GetComponent<Enemy>().Hit(this);
         }
-    }
-
-    //Returns the position of the worm as projected onto the surface of the planet.
-    RaycastHit? GetEpicenter()
-    {
-        var diff = transform.position - planet.transform.position;
-        var direction = diff.normalized;
-        var origin = direction * planet.GetComponent<PlanetObj>().safeHeight + planet.transform.position;
-
-        RaycastHit hitInfo;
-        LayerMask layerPlanet = 1 << 8;
-        if (Physics.Raycast(origin, -direction, out hitInfo, planet.GetComponent<PlanetObj>().safeHeight, layerPlanet))
-            return hitInfo;
-
-        return null;
+        else if(c.gameObject.tag == "Wall")
+        {
+            c.GetComponent<Breakable>().BreakUp(this.gameObject);
+        }
     }
 
     float Filter(float t)

@@ -11,7 +11,6 @@ public class Enemy : MonoBehaviour
     private float offsetRand; //A random value 0..1 for this instance.
 
     public GameObject target;
-    public GameObject planet;
 
     /* Updated every frame */
     public Quaternion quatUp;
@@ -45,7 +44,7 @@ public class Enemy : MonoBehaviour
         rb = GetComponent<Rigidbody>();
 
         offsetRand = Random.value;
-        up = (transform.position - planet.transform.position).normalized;
+        up = (transform.position - PlanetObj.S.transform.position).normalized;
         transform.position += up * offsetRand * 15;
     }
 
@@ -71,7 +70,7 @@ public class Enemy : MonoBehaviour
 
     void OrientSelf()
     {
-        diff = transform.position - planet.transform.position;
+        diff = transform.position - PlanetObj.S.transform.position;
         up = diff.normalized;
         dCenter = diff.magnitude;
         facing = rb.velocity.normalized;
@@ -79,12 +78,12 @@ public class Enemy : MonoBehaviour
         right = Vector3.Cross(up, facing);
         quatUp = Quaternion.LookRotation(forward, up);
 
-        RaycastHit? hitInfo = GetEpicenter();
+        RaycastHit? hitInfo = PlanetObj.GetEpicenter(transform.position);
         if (hitInfo != null)
         {
             epicenter = hitInfo.Value.point;
             normal = hitInfo.Value.normal;
-            dEpicenter = (epicenter.Value - planet.transform.position).magnitude;
+            dEpicenter = (epicenter.Value - PlanetObj.S.transform.position).magnitude;
         }
     }
 
@@ -95,7 +94,7 @@ public class Enemy : MonoBehaviour
             vel.y -= gravityValue;
             if (underground)
             {
-                vel.y = Mathf.Abs(vel.y) * 0.9f;
+                vel.y = Mathf.Abs(vel.y) * 0.25f;
                 if(vel.y < 1)
                     Destroy(this.gameObject); //Destroy self if we are underground after being hit
             }
@@ -126,7 +125,7 @@ public class Enemy : MonoBehaviour
 
     void OnTriggerEnter(Collider c)
     {
-        Debug.Log(c.gameObject.name + " hit!");
+        //Debug.Log(c.gameObject.name + " hit!");
     }
 
     public void Hit(Worm w)
@@ -135,20 +134,5 @@ public class Enemy : MonoBehaviour
         rb.velocity = (3 * w.rb.velocity.magnitude) * Vector3.Lerp((transform.position - wp).normalized, normal, 0.5f);
         vel = Vector3.zero;
         ragdoll = true;
-    }
-
-    //Returns the position of the worm as projected onto the surface of the planet.
-    RaycastHit? GetEpicenter()
-    {
-        var diff = transform.position - planet.transform.position;
-        var direction = diff.normalized;
-        var origin = direction * planet.GetComponent<PlanetObj>().safeHeight + planet.transform.position;
-
-        RaycastHit hitInfo;
-        LayerMask layerPlanet = 1 << 8;
-        if (Physics.Raycast(origin, -direction, out hitInfo, planet.GetComponent<PlanetObj>().safeHeight, layerPlanet))
-            return hitInfo;
-
-        return null;
     }
 }

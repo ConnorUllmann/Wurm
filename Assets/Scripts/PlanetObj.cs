@@ -3,11 +3,14 @@ using System.Collections;
 
 public class PlanetObj : MonoBehaviour {
 
+    public static PlanetObj S;
+
     public float safeHeight;
 
 	// Use this for initialization
 	void Start ()
     {
+        S = this;
         safeHeight = Mathf.Max(transform.localScale.x, transform.localScale.y, transform.localScale.z) / 2 + 10000;
         /*var mesh = GetComponent<MeshFilter>().mesh;
         Vector3[] v = new Vector3[mesh.vertexCount];
@@ -44,4 +47,19 @@ public class PlanetObj : MonoBehaviour {
 	void Update () {
 	
 	}
+
+    //Returns the position as projected onto the surface of the planet.
+    public static RaycastHit? GetEpicenter(Vector3 pos)
+    {
+        var diff = pos - S.transform.position;
+        var direction = diff.normalized;
+        var origin = direction * S.GetComponent<PlanetObj>().safeHeight + S.transform.position;
+
+        RaycastHit hitInfo;
+        LayerMask layerPlanet = 1 << 8;
+        if (Physics.Raycast(origin, -direction, out hitInfo, S.GetComponent<PlanetObj>().safeHeight, layerPlanet))
+            return hitInfo;
+
+        return null;
+    }
 }
