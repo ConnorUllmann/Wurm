@@ -44,7 +44,7 @@ public class Enemy : MonoBehaviour
         rb = GetComponent<Rigidbody>();
 
         offsetRand = Random.value;
-        up = (transform.position - PlanetObj.S.transform.position).normalized;
+        up = (transform.position - PlanetObj.position).normalized;
         transform.position += up * offsetRand * 15;
     }
 
@@ -70,7 +70,7 @@ public class Enemy : MonoBehaviour
 
     void OrientSelf()
     {
-        diff = transform.position - PlanetObj.S.transform.position;
+        diff = transform.position - PlanetObj.position;
         up = diff.normalized;
         dCenter = diff.magnitude;
         facing = rb.velocity.normalized;
@@ -83,7 +83,7 @@ public class Enemy : MonoBehaviour
         {
             epicenter = hitInfo.Value.point;
             normal = hitInfo.Value.normal;
-            dEpicenter = (epicenter.Value - PlanetObj.S.transform.position).magnitude;
+            dEpicenter = (epicenter.Value - PlanetObj.position).magnitude;
         }
     }
 
@@ -103,15 +103,20 @@ public class Enemy : MonoBehaviour
         else
         {
             groundSpeed = groundSpeedNormal;
-            vel = new Vector3(1, vel.y, groundSpeed);
-            if (underground)
+            var t = transform.position;
+            var s = target.transform.position;
+            var d = (s - t - Vector3.Project(s - t, t - PlanetObj.position)).normalized;
+
+            vel = new Vector3(0, vel.y, 0);//1, vel.y, groundSpeed);
+            if (depth > -0.3f * transform.lossyScale.y)
             {
-                transform.position += up * depth;
+                //transform.position += up * depth;
                 vel.y = hopSpeedY;
             }
             else
                 vel.y -= gravityValue;
             rb.velocity = quatUp * vel;
+            rb.velocity = new Vector3(groundSpeed * d.x, rb.velocity.y, groundSpeed * d.z);
         }
     }
 

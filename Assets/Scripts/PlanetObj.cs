@@ -62,4 +62,6 @@ public class PlanetObj : MonoBehaviour {
 
         return null;
     }
+
+    public static Vector3 position { get { return PlanetObj.S.transform.position; } set { PlanetObj.S.transform.position = value; } }
 }
