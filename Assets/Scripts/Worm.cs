@@ -314,7 +314,11 @@ public class Worm : MonoBehaviour {
         }
         else if(c.gameObject.tag == "Wall")
         {
-            c.GetComponent<Breakable>().BreakUp(this.gameObject);
+            c.GetComponent<Breakable>().BreakUp(gameObject);
+        }
+        else if(c.gameObject.tag == "Tree")
+        {
+            c.GetComponent<Tree>().TipOver(gameObject);
         }
     }
 
