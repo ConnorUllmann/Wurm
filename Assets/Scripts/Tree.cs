@@ -16,10 +16,16 @@ public class Tree : MonoBehaviour {
     public float tipAngleMax = 90;
     public bool tip = false;
 
+    public float distanceDown = 100;
+    public float sinkSpeed = 1;
+
     Vector3 n;
+    RaycastHit epicenter;
 
     // Use this for initialization
     void Start () {
+        transform.localScale *= (Random.value * 0.5f + 0.75f);
+        distanceDown *= transform.localScale.x;
         leaves = new List<Transform>();
         leavesOffsetStart = new List<Vector3>();
         leavesOffset = new List<Vector3>();
@@ -32,14 +38,13 @@ public class Tree : MonoBehaviour {
                 leavesOffset.Add(Vector3.zero);
             }
         }
+        epicenter = PlanetObj.GetEpicenter(transform.position).Value;
+        transform.position = epicenter.point;
     }
 	
 	// Update is called once per frame
 	void Update ()
     {
-
-        var epicenter = PlanetObj.GetEpicenter(transform.position).Value;
-        transform.position = epicenter.point;
 
         var diff = transform.position - PlanetObj.position;
         n = epicenter.normal;
@@ -50,10 +55,20 @@ public class Tree : MonoBehaviour {
 
         if (tip)
         {
-            tipAngleRate += Time.deltaTime * tipDirection.magnitude / 30f;
+            tipAngleRate += Time.deltaTime * tipDirection.magnitude / 20f;
             tipAngle = Mathf.Min(tipAngle + tipAngleRate, tipAngleMax);
+            if(tipAngle == tipAngleMax)
+            {
+                transform.position += sinkSpeed * (PlanetObj.position - transform.position).normalized;
+                distanceDown -= sinkSpeed;
+                if(distanceDown <= 0)
+                {
+                    Destroy(this.gameObject);
+                }
+            }
             var right = Vector3.Cross(tipDirection, n).normalized;
-            transform.Rotate(right, tipAngle);
+            transform.rotation = Quaternion.AngleAxis(-tipAngle, right) * transform.rotation;
+            //transform.Rotate(right, tipAngle);
             Debug.DrawRay(transform.position, tipDirection, Color.white);
         }
         //transform.Rotate(new Vector3(tipAngle, 0, 0));
@@ -62,7 +77,7 @@ public class Tree : MonoBehaviour {
         {
             if (wind.magnitude < 0.001f)
             {
-                wind = 40 * Time.deltaTime * Random.insideUnitSphere;
+                //wind = 40 * Time.deltaTime * Random.insideUnitSphere;
             }
         }
         else
@@ -82,7 +97,9 @@ public class Tree : MonoBehaviour {
         {
             tip = true;
             //Store direction of tip as well as amount of tip.
-            tipDirection = o.GetComponent<Rigidbody>().velocity.magnitude * (o.GetComponent<Rigidbody>().velocity - Vector3.Project(o.GetComponent<Rigidbody>().velocity, n)).normalized;
+            tipDirection = Vector3.Lerp(
+                o.GetComponent<Rigidbody>().velocity.magnitude * (o.GetComponent<Rigidbody>().velocity - Vector3.Project(o.GetComponent<Rigidbody>().velocity, n)).normalized,
+                (o.transform.position - transform.position).normalized, 0.5f);
             //tipDirection = (transform.position - o.transform.position).normalized * o.GetComponent<Rigidbody>().velocity.magnitude;
         }
     }

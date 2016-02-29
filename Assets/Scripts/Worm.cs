@@ -60,6 +60,10 @@ public class Worm : MonoBehaviour {
     float v_input;
     bool z_input;
     bool x_input;
+    bool z_input_down;
+    bool x_input_down;
+    bool z_input_up;
+    bool x_input_up;
 
     public List<Vector3> positions;
     public List<Quaternion> quaternions;
@@ -219,6 +223,10 @@ public class Worm : MonoBehaviour {
         v_input = Input.GetAxis("Vertical");
         z_input = Input.GetKey(KeyCode.Z);
         x_input = Input.GetKey(KeyCode.X);
+        z_input_down = Input.GetKeyDown(KeyCode.Z);
+        x_input_down = Input.GetKeyDown(KeyCode.X);
+        z_input_up = Input.GetKeyUp(KeyCode.Z);
+        x_input_up = Input.GetKeyUp(KeyCode.X);
     }
 
     void UpdateSpeed()
@@ -232,8 +240,12 @@ public class Worm : MonoBehaviour {
         {
             if (z_input)
             {
-                if (vel.y > 0)
+                if (vel.y >= 0)
+                {
+                    if (vel.y < 500)
+                        vel.y += 750 * Time.deltaTime;
                     vel.y += 750 * Time.deltaTime;
+                }
             }
 
             vel.y -= (depthTo - depth) * 0.25f;
@@ -319,6 +331,10 @@ public class Worm : MonoBehaviour {
         else if(c.gameObject.tag == "Tree")
         {
             c.GetComponent<Tree>().TipOver(gameObject);
+        }
+        else if (c.gameObject.tag == "Spear")
+        {
+            c.GetComponent<Spear>().Hit(gameObject);
         }
     }
 

@@ -13,6 +13,8 @@ public class Enemy : MonoBehaviour
     public GameObject target;
     public GameObject spearPrefab;
 
+    public Rigidbody rb_e;
+
     /* Updated every frame */
     public Quaternion quatUp;
     public Quaternion bodyRotation;
@@ -29,7 +31,7 @@ public class Enemy : MonoBehaviour
     public Vector3 diff = Vector3.zero;               //Vector from the planet to the worm.
     public float gravityValue;         //Amount of gravity (> 0)
     public Rigidbody rb;               //The player's rigidbody
-    public Vector3 vel = Vector3.zero;                //Velocity applied to the worm head.
+    public float ySpeed;                //y-speed (in local space)
     /***********************/
 
     public float depthTo;       //The depth that the worm will tween to when underground.
@@ -63,7 +65,7 @@ public class Enemy : MonoBehaviour
         {
             var o = Instantiate<GameObject>(spearPrefab);
             o.transform.position = transform.position;
-            o.GetComponent<Rigidbody>().velocity = forward * 350f + up * 500f;
+            o.GetComponent<Rigidbody>().velocity = forward * 250f + up * 200f;
         }
 
         /*Debug.DrawRay(epicenter.Value, normal * 1000);
@@ -82,10 +84,10 @@ public class Enemy : MonoBehaviour
         diff = transform.position - PlanetObj.position;
         up = diff.normalized;
         dCenter = diff.magnitude;
-        facing = rb.velocity.normalized;
+        facing = rb.velocity.sqrMagnitude == 0 ? Vector3.forward : rb.velocity.normalized;
         forward = (facing - Vector3.Project(facing, up)).normalized;
         right = Vector3.Cross(up, facing);
-        quatUp = Quaternion.LookRotation(forward, up);
+        quatUp = Quaternion.LookRotation(forward, normal);
 
         RaycastHit? hitInfo = PlanetObj.GetEpicenter(transform.position);
         if (hitInfo != null)
@@ -100,14 +102,39 @@ public class Enemy : MonoBehaviour
     {
         if (ragdoll)
         {
-            vel.y -= gravityValue;
+
+            ySpeed -= gravityValue;
             if (underground)
             {
-                vel.y = Mathf.Abs(vel.y) * 0.25f;
-                if(vel.y < 1)
+                ySpeed = Mathf.Abs(ySpeed) * 0.25f;
+                if (ySpeed < 1)
+                {
+                    rb_e.transform.SetParent(transform);
                     Destroy(this.gameObject); //Destroy self if we are underground after being hit
+                }
             }
-            rb.velocity += quatUp * vel;
+            var epicenter_e = PlanetObj.GetEpicenter(rb_e.transform.position);
+            if ((rb_e.transform.position - PlanetObj.position).sqrMagnitude <= (epicenter_e.Value.point - PlanetObj.position).sqrMagnitude)
+            {
+                var proj = Vector3.Project(rb_e.velocity, up);
+                var dot = Vector3.Dot(proj, up); //This will be positive if the projection is in the same general direction as the up vector
+                var ySpeed_e = proj.magnitude;
+                if(dot > 0)
+                {
+
+                }
+                else
+                {
+                    rb_e.velocity -= 1.25f * ySpeed_e * up; //Invert ySpeed of e 
+                    if (ySpeed_e < 1)
+                    {
+                        rb_e.transform.SetParent(transform);
+                        Destroy(this.gameObject);
+                    }
+                }        
+            }
+            rb.velocity += ySpeed * up;
+            rb_e.velocity += -gravityValue * up;
         }
         else
         {
@@ -116,23 +143,21 @@ public class Enemy : MonoBehaviour
             var s = target.transform.position;
             var d = (s - t - Vector3.Project(s - t, t - PlanetObj.position)).normalized;
 
-            vel = new Vector3(0, vel.y, 0);//1, vel.y, groundSpeed);
+            
             if (depth > -0.3f * transform.lossyScale.y)
-            {
-                //transform.position += up * depth;
-                vel.y = hopSpeedY;
-            }
+                ySpeed = hopSpeedY;
             else
-                vel.y -= gravityValue;
-            rb.velocity = quatUp * vel;
-            rb.velocity = new Vector3(groundSpeed * d.x, rb.velocity.y, groundSpeed * d.z);
+                ySpeed -= gravityValue;
+            rb.velocity = ySpeed * up + new Vector3(groundSpeed * d.x, groundSpeed * d.y, groundSpeed * d.z);
         }
+
+        //Debug.DrawRay(epicenter.Value, rb.velocity, Color.black);
     }
 
     void RotateBody()
     {
-        bodyRotation = Quaternion.Slerp(bodyRotation, Quaternion.LookRotation(-facing, normal), 0.1f);
-        bodyAirRotationAmount += (-vel.y / 2.8f - bodyAirRotationAmount) * 0.3f;
+        bodyRotation = Quaternion.Slerp(bodyRotation, Quaternion.LookRotation(-forward, normal), 0.8f);
+        bodyAirRotationAmount += (-ySpeed / 2.8f - bodyAirRotationAmount) * 0.3f;
         var _bodyAirRotation = Quaternion.Euler(new Vector3(bodyAirRotationAmount, 0, 0));
         transform.rotation = bodyRotation * _bodyAirRotation;
     }
@@ -146,7 +171,13 @@ public class Enemy : MonoBehaviour
     {
         var wp = w.transform.position;
         rb.velocity = (3 * w.rb.velocity.magnitude) * Vector3.Lerp((transform.position - wp).normalized, normal, 0.5f);
-        vel = Vector3.zero;
+        ySpeed = 0;
         ragdoll = true;
+
+        rb_e = transform.FindChild("EnemyHead").GetComponent<Rigidbody>();
+        transform.FindChild("EnemyHead").GetComponent<SphereCollider>().enabled = true;
+        transform.FindChild("EnemyHead").SetParent(null);
+        rb_e.isKinematic = false;
+        rb_e.velocity = (3 * w.rb.velocity.magnitude) * Vector3.Lerp((rb_e.transform.position - wp).normalized, normal, 0.5f);
     }
 }

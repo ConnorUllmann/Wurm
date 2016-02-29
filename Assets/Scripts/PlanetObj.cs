@@ -11,7 +11,7 @@ public class PlanetObj : MonoBehaviour {
 	void Start ()
     {
         S = this;
-        safeHeight = Mathf.Max(transform.localScale.x, transform.localScale.y, transform.localScale.z) / 2 + 10000;
+        safeHeight = Mathf.Max(transform.localScale.x, transform.localScale.y, transform.localScale.z) / 2 + 1000000;
         /*var mesh = GetComponent<MeshFilter>().mesh;
         Vector3[] v = new Vector3[mesh.vertexCount];
         bool[] b = new bool[mesh.vertexCount];
@@ -59,7 +59,7 @@ public class PlanetObj : MonoBehaviour {
         LayerMask layerPlanet = 1 << 8;
         if (Physics.Raycast(origin, -direction, out hitInfo, S.safeHeight, layerPlanet))
             return hitInfo;
-        Debug.Log("Null!");
+        //Debug.Log("Null!");
         return null;
     }
 

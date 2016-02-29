@@ -24,6 +24,10 @@ public class BodyPart : MonoBehaviour {
         {
             c.GetComponent<Breakable>().BreakUp(gameObject);
         }
+        else if(c.gameObject.tag == "Spear")
+        {
+            c.GetComponent<Spear>().Hit(gameObject);
+        }
     }
 
     Worm worm { get { return transform.parent.GetComponent<Worm>(); } }
