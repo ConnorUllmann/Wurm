@@ -91,7 +91,7 @@ public class Worm : MonoBehaviour {
     }
 
     // Update is called once per frame
-    void Update () {
+    void FixedUpdate () {
         time += Time.deltaTime;
 
         OrientSelf();
@@ -113,6 +113,8 @@ public class Worm : MonoBehaviour {
         UpdateCamera();
         UpdateBodyParts();
         DrawPositions();
+
+        transform.FindChild("Head").FindChild("HeadLight").position += (epicenter.Value + up * (underground ? 35 : 1) - transform.FindChild("Head").FindChild("HeadLight").position) * 0.1f;
 
         undergroundLast = underground;
         velYSignLast = velYSign;

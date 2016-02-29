@@ -11,6 +11,7 @@ public class Enemy : MonoBehaviour
     private float offsetRand; //A random value 0..1 for this instance.
 
     public GameObject target;
+    public GameObject spearPrefab;
 
     /* Updated every frame */
     public Quaternion quatUp;
@@ -49,13 +50,21 @@ public class Enemy : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
         OrientSelf();
 
         UpdateSpeed();
 
         RotateBody();
+
+        //Spawn spear at random
+        if(Mathf.Floor(Random.value * 400f) == 0)
+        {
+            var o = Instantiate<GameObject>(spearPrefab);
+            o.transform.position = transform.position;
+            o.GetComponent<Rigidbody>().velocity = forward * 350f + up * 500f;
+        }
 
         /*Debug.DrawRay(epicenter.Value, normal * 1000);
         Debug.DrawRay(epicenter.Value, up * 1100, Color.blue);

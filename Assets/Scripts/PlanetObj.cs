@@ -51,15 +51,15 @@ public class PlanetObj : MonoBehaviour {
     //Returns the position as projected onto the surface of the planet.
     public static RaycastHit? GetEpicenter(Vector3 pos)
     {
-        var diff = pos - S.transform.position;
+        var diff = pos - position;
         var direction = diff.normalized;
-        var origin = direction * S.GetComponent<PlanetObj>().safeHeight + S.transform.position;
+        var origin = direction * S.safeHeight + position;
 
         RaycastHit hitInfo;
         LayerMask layerPlanet = 1 << 8;
-        if (Physics.Raycast(origin, -direction, out hitInfo, S.GetComponent<PlanetObj>().safeHeight, layerPlanet))
+        if (Physics.Raycast(origin, -direction, out hitInfo, S.safeHeight, layerPlanet))
             return hitInfo;
-
+        Debug.Log("Null!");
         return null;
     }
 
