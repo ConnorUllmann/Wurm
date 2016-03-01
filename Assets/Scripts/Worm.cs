@@ -334,10 +334,7 @@ public class Worm : MonoBehaviour {
         }
         else if (c.gameObject.tag == "Spear")
         {
-            if(c.gameObject == head)
-                c.GetComponent<Spear>().Hit(transform, true);
-            else
-                c.GetComponent<Spear>().Hit(c.transform, false);
+            c.GetComponent<Spear>().Hit(transform, true);
         }
     }
 

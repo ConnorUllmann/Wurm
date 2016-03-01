@@ -80,19 +80,21 @@ public class Spear : MonoBehaviour {
             return;
 
         inWorm = true;
-        localRotationOnWormHit = transform.localRotation;
+        //localRotationOnWormHit = transform.rotation;
+        var radius = o.GetComponent<SphereCollider>().radius * o.transform.lossyScale.x;
         GetComponent<Rigidbody>().isKinematic = true;
-        //var radius = o.GetComponent<SphereCollider>().radius;
 
+        //If we hit the Worm object, set the parent to transform to its head
         if (isWorm)
-        {
             o = o.FindChild("Head");
-        }
-        /*var d = (transform.position - o.position).magnitude;
-        var dM = radius * 0.95f;
-        if (d > dM)
-            transform.position = (transform.position - o.position).normalized * dM + o.position;*/
-        transform.position -= (transform.position - o.position) * 0.25f;
+
+        transform.position = (transform.position - o.position).normalized * radius + o.position;
+        localRotationOnWormHit = Quaternion.Slerp(Quaternion.LookRotation(o.position - transform.position), transform.rotation, 0.5f);
+
+        //Move spear closer to the worm's body
+        //if (isWorm)
+            Debug.Log(radius);
+        //transform.position -= (transform.position - o.position) * 0.05f;
         transform.SetParent(o, true);
     }
 }
