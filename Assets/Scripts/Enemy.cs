@@ -4,6 +4,9 @@ using System.Collections.Generic;
 
 public class Enemy : MonoBehaviour
 {
+    private static float forwardThrowSpeed = 300;
+    private static float upwardThrowSpeed = 800;
+
     public float minGroundSpeed;
     public float groundSpeedNormal;
     public float hopSpeedY;
@@ -61,11 +64,11 @@ public class Enemy : MonoBehaviour
         RotateBody();
 
         //Spawn spear at random
-        if(Mathf.Floor(Random.value * 400f) == 0)
+        if(Mathf.Floor(Random.value * 100f) == 0)
         {
             var o = Instantiate<GameObject>(spearPrefab);
             o.transform.position = transform.position;
-            o.GetComponent<Rigidbody>().velocity = forward * 250f + up * 200f;
+            o.GetComponent<Rigidbody>().velocity = forward * forwardThrowSpeed + up * upwardThrowSpeed;
         }
 
         /*Debug.DrawRay(epicenter.Value, normal * 1000);
@@ -114,7 +117,7 @@ public class Enemy : MonoBehaviour
                 }
             }
             var epicenter_e = PlanetObj.GetEpicenter(rb_e.transform.position);
-            if ((rb_e.transform.position - PlanetObj.position).sqrMagnitude <= (epicenter_e.Value.point - PlanetObj.position).sqrMagnitude)
+            if (epicenter_e.HasValue && (rb_e.transform.position - PlanetObj.position).sqrMagnitude <= (epicenter_e.Value.point - PlanetObj.position).sqrMagnitude)
             {
                 var proj = Vector3.Project(rb_e.velocity, up);
                 var dot = Vector3.Dot(proj, up); //This will be positive if the projection is in the same general direction as the up vector
@@ -169,6 +172,9 @@ public class Enemy : MonoBehaviour
 
     public void Hit(Worm w)
     {
+        if (ragdoll)
+            return;
+
         var wp = w.transform.position;
         rb.velocity = (3 * w.rb.velocity.magnitude) * Vector3.Lerp((transform.position - wp).normalized, normal, 0.5f);
         ySpeed = 0;

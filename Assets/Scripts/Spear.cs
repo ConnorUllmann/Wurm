@@ -7,6 +7,7 @@ public class Spear : MonoBehaviour {
     public bool inGround;
     public bool inWorm;
 
+    public Quaternion localRotationOnWormHit;
     public float dieTimerMax;
     public float dieTimer;
 
@@ -19,9 +20,23 @@ public class Spear : MonoBehaviour {
 	// Update is called once per frame
 	void Update ()
     {
-
+        RaycastHit? hitInfo;
         if (inWorm)
         {
+            transform.localRotation = localRotationOnWormHit;
+            hitInfo = PlanetObj.GetEpicenter(transform.position);
+            if (hitInfo.HasValue)
+            {
+                if ((transform.position - PlanetObj.position).magnitude <
+                   (hitInfo.Value.point - PlanetObj.position).magnitude - transform.lossyScale.x * 20)
+                {
+                    var v = -Time.deltaTime / 100f;
+                    if(transform.localScale.z + v <= 0.01f)                
+                        Destroy(this.gameObject);
+                    else
+                        transform.localScale += new Vector3(0, 0, v);
+                }
+            }
         }
         else
         {
@@ -45,7 +60,7 @@ public class Spear : MonoBehaviour {
                 transform.LookAt(transform.position + GetComponent<Rigidbody>().velocity);
             }
 
-            RaycastHit? hitInfo = PlanetObj.GetEpicenter(transform.position);
+            hitInfo = PlanetObj.GetEpicenter(transform.position);
             if (hitInfo.HasValue)
             {
                 var epicenter = hitInfo.Value.point;
@@ -59,14 +74,25 @@ public class Spear : MonoBehaviour {
         }
 	}
 
-    public void Hit(GameObject o)
+    public void Hit(Transform o, bool isWorm)
     {
-        Destroy(this.gameObject);
+        if (inWorm)
+            return;
 
-        transform.SetParent(o.transform);
-        transform.position = (transform.position - o.transform.position).normalized * o.GetComponent<SphereCollider>().radius * o.transform.lossyScale.x + o.transform.position;
-        //transform.localRotation
         inWorm = true;
+        localRotationOnWormHit = transform.localRotation;
         GetComponent<Rigidbody>().isKinematic = true;
+        //var radius = o.GetComponent<SphereCollider>().radius;
+
+        if (isWorm)
+        {
+            o = o.FindChild("Head");
+        }
+        /*var d = (transform.position - o.position).magnitude;
+        var dM = radius * 0.95f;
+        if (d > dM)
+            transform.position = (transform.position - o.position).normalized * dM + o.position;*/
+        transform.position -= (transform.position - o.position) * 0.25f;
+        transform.SetParent(o, true);
     }
 }

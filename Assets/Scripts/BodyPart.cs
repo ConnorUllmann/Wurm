@@ -15,7 +15,7 @@ public class BodyPart : MonoBehaviour {
 
     void OnTriggerEnter(Collider c)
     {
-        Debug.Log(c.gameObject.name + " hit! " + c.gameObject.tag);
+        //Debug.Log(c.gameObject.name + " hit! " + c.gameObject.tag);
         if (c.gameObject.tag == "Enemy")
         {
             c.gameObject.GetComponent<Enemy>().Hit(worm);
@@ -26,7 +26,7 @@ public class BodyPart : MonoBehaviour {
         }
         else if(c.gameObject.tag == "Spear")
         {
-            c.GetComponent<Spear>().Hit(gameObject);
+            c.GetComponent<Spear>().Hit(transform, false);
         }
     }
 

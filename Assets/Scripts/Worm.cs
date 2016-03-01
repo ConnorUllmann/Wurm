@@ -319,7 +319,7 @@ public class Worm : MonoBehaviour {
 
     void OnTriggerEnter(Collider c)
     {
-        Debug.Log(c.gameObject.name + " hit! " + c.gameObject.tag);
+        //Debug.Log(c.gameObject.name + " hit! " + c.gameObject.tag);
         if(c.gameObject.tag == "Enemy")
         {
             c.gameObject.GetComponent<Enemy>().Hit(this);
@@ -334,7 +334,10 @@ public class Worm : MonoBehaviour {
         }
         else if (c.gameObject.tag == "Spear")
         {
-            c.GetComponent<Spear>().Hit(gameObject);
+            if(c.gameObject == head)
+                c.GetComponent<Spear>().Hit(transform, true);
+            else
+                c.GetComponent<Spear>().Hit(c.transform, false);
         }
     }
 
