@@ -11,19 +11,35 @@ public class Breakable : MonoBehaviour
     public GameObject breakablePrefab;
     public GameObject bp;
 
+    public int breaks;
+    public int gravityBreakLimit; //Number of breaks remaining when the breakable will activate gravity.
+
+    public bool HasGravity { get { return  breaks <= gravityBreakLimit; } }
+    public void SetBreaks(int _breaks)
+    {
+        breaks = _breaks;
+        if (breaks <= gravityBreakLimit)
+        {
+            GetComponent<Rigidbody>().isKinematic = false;
+        }
+    }
+
     // Use this for initialization
     void Start()
     {
-        bp = Instantiate<GameObject>(breakablePrefab);
-        bp.SetActive(false);
-        if (maximalElement(transform.lossyScale) <= 100f)
+        SetBreaks(breaks);
+        if (breaks > 0)
         {
+            bp = Instantiate<GameObject>(breakablePrefab);
+            bp.SetActive(false);
             foreach (Transform t in bp.transform)
             {
+                var pos = t.position;
+                pos.x *= transform.lossyScale.x;
+                pos.y *= transform.lossyScale.y;
+                pos.z *= transform.lossyScale.z;
+                t.position = pos;
                 t.localScale = transform.lossyScale;
-                t.localPosition = new Vector3(t.localScale.x * t.localPosition.x,
-                                              t.localScale.y * t.localPosition.y,
-                                              t.localScale.z * t.localPosition.z);
                 t.GetComponent<Breakable>().enabled = true;
             }
         }
@@ -39,8 +55,8 @@ public class Breakable : MonoBehaviour
             rb.velocity += -gravityValue * diff.normalized;
         }
         var epi = PlanetObj.GetEpicenter(transform.position);
-        if (!epi.HasValue || diff.magnitude <= (epi.Value.point - PlanetObj.position).magnitude - maximalElement(transform.lossyScale))
-            Destroy(this.gameObject);
+        //if (!epi.HasValue || diff.magnitude <= (epi.Value.point - PlanetObj.position).magnitude - maximalElement(transform.lossyScale))
+       //     Destroy(this.gameObject);
     }
 
     void OnCollisionEnter(Collision collisionInfo)
@@ -50,16 +66,16 @@ public class Breakable : MonoBehaviour
 
     public void BreakUp(GameObject breaker=null)
     {
-        if (maximalElement(transform.lossyScale) >= 50f)
+        if (breaks > 0)
         {
             bp.SetActive(true);
             bp.transform.position = transform.position;
             bp.transform.rotation = transform.rotation;
-            if (maximalElement(transform.lossyScale) <= 100f)
+            foreach (Transform t in bp.transform)
             {
-                foreach (Transform t in bp.transform)
+                t.GetComponent<Breakable>().SetBreaks(breaks - 1);
+                if (t.GetComponent<Breakable>().HasGravity)
                 {
-                    t.GetComponent<Rigidbody>().isKinematic = false;
                     if (breaker && breaker.GetComponent<Rigidbody>())
                     {
                         t.GetComponent<Rigidbody>().velocity -= (transform.position - breaker.transform.position).normalized * breaker.GetComponent<Rigidbody>().velocity.magnitude * velocityMultiplier;
@@ -67,20 +83,16 @@ public class Breakable : MonoBehaviour
                     }
                 }
             }
+            breaks = 0;
             Destroy(this.gameObject);
         }
         else
         {
-            /*if (Random.value < 0.25f)
-                Destroy(this.gameObject);
-            else */
             if (breaker && breaker.GetComponent<Rigidbody>())
             {
-                //GetComponent<Rigidbody>().velocity += (transform.position - breaker.transform.position).normalized * Mathf.Min(breaker.GetComponent<Rigidbody>().velocity.magnitude * velocityMultiplier, velocityMax);
                 GetComponent<Rigidbody>().velocity -= (transform.position - breaker.transform.position).normalized * breaker.GetComponent<Rigidbody>().velocity.magnitude * velocityMultiplier;
                 GetComponent<Rigidbody>().velocity = Mathf.Min(GetComponent<Rigidbody>().velocity.magnitude, velocityMax) * GetComponent<Rigidbody>().velocity.normalized;
             }
-
         }
     }
 

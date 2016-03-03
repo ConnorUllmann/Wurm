@@ -88,13 +88,10 @@ public class Spear : MonoBehaviour {
         if (isWorm)
             o = o.FindChild("Head");
 
+        //Move spear closer to the worm's body
         transform.position = (transform.position - o.position).normalized * radius + o.position;
         localRotationOnWormHit = Quaternion.Slerp(Quaternion.LookRotation(o.position - transform.position), transform.rotation, 0.5f);
-
-        //Move spear closer to the worm's body
-        //if (isWorm)
-            Debug.Log(radius);
-        //transform.position -= (transform.position - o.position) * 0.05f;
+        
         transform.SetParent(o, true);
     }
 }

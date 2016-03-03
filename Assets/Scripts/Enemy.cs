@@ -16,59 +16,46 @@ public class Enemy : MonoBehaviour
     public GameObject target;
     public GameObject spearPrefab;
 
+    public Orientation or;
+    public Rigidbody rb;
     public Rigidbody rb_e;
 
     /* Updated every frame */
-    public Quaternion quatUp;
     public Quaternion bodyRotation;
     public float bodyAirRotationAmount;
     public float groundSpeed;
-    public Vector3? epicenter;         //Position of the worm on the planet's surface.
-    public float? dEpicenter;          //Distance from the center of the planet to the surface at the position of the worm.
-    public float dCenter;              //Distance from center of the planet to the worm.
-    public Vector3 forward = Vector3.forward;            //Direction the worm is moving tangentially to the planet SPHERE
-    public Vector3 normal = Vector3.up;             //Direction of the surface at the epicenter;
-    public Vector3 facing = Vector3.forward;             //Direction of motion;
-    public Vector3 up = Vector3.up;                 //Direction from the center of the sphere up.
-    public Vector3 right = Vector3.right;                 //Direction from the center of the sphere right.
-    public Vector3 diff = Vector3.zero;               //Vector from the planet to the worm.
     public float gravityValue;         //Amount of gravity (> 0)
-    public Rigidbody rb;               //The player's rigidbody
     public float ySpeed;                //y-speed (in local space)
     /***********************/
-
-    public float depthTo;       //The depth that the worm will tween to when underground.
-    public float depth { get { if (!dEpicenter.HasValue) return float.MinValue; return dEpicenter.Value - dCenter; } } //positive means below-ground.
-    public bool underground { get { if (!dEpicenter.HasValue) return false; return dCenter <= dEpicenter.Value; } }
-    private bool undergroundLast = false;
 
     public bool ragdoll = false;
 
     // Use this for initialization
     void Start()
     {
+        or = new Orientation(gameObject, true);
         rb = GetComponent<Rigidbody>();
 
         offsetRand = Random.value;
-        up = (transform.position - PlanetObj.position).normalized;
-        transform.position += up * offsetRand * 15;
+        transform.position += (transform.position - PlanetObj.position).normalized * offsetRand * 15;
     }
 
     // Update is called once per frame
     void FixedUpdate()
     {
-        OrientSelf();
+
+        or.Update();
 
         UpdateSpeed();
 
         RotateBody();
 
         //Spawn spear at random
-        if(Mathf.Floor(Random.value * 100f) == 0)
+        if(Mathf.Floor(Random.value * 400f) == 0)
         {
             var o = Instantiate<GameObject>(spearPrefab);
             o.transform.position = transform.position;
-            o.GetComponent<Rigidbody>().velocity = forward * forwardThrowSpeed + up * upwardThrowSpeed;
+            o.GetComponent<Rigidbody>().velocity = or.forward * forwardThrowSpeed + or.up * upwardThrowSpeed;
         }
 
         /*Debug.DrawRay(epicenter.Value, normal * 1000);
@@ -78,36 +65,14 @@ public class Enemy : MonoBehaviour
         Debug.DrawRay(transform.position, quatUp * Vector3.forward * 1000, Color.yellow);
         Debug.DrawRay(transform.position, quatUp * Vector3.up * 1000, Color.cyan);// 1000 * vel.normalized, Color.cyan);
         Debug.DrawRay(transform.position, quatUp * Vector3.right * 1000, Color.magenta);*/
-        
-        undergroundLast = underground;
-    }
-
-    void OrientSelf()
-    {
-        diff = transform.position - PlanetObj.position;
-        up = diff.normalized;
-        dCenter = diff.magnitude;
-        facing = rb.velocity.sqrMagnitude == 0 ? Vector3.forward : rb.velocity.normalized;
-        forward = (facing - Vector3.Project(facing, up)).normalized;
-        right = Vector3.Cross(up, facing);
-        quatUp = Quaternion.LookRotation(forward, normal);
-
-        RaycastHit? hitInfo = PlanetObj.GetEpicenter(transform.position);
-        if (hitInfo != null)
-        {
-            epicenter = hitInfo.Value.point;
-            normal = hitInfo.Value.normal;
-            dEpicenter = (epicenter.Value - PlanetObj.position).magnitude;
-        }
     }
 
     void UpdateSpeed()
     {
         if (ragdoll)
         {
-
             ySpeed -= gravityValue;
-            if (underground)
+            if (or.underground)
             {
                 ySpeed = Mathf.Abs(ySpeed) * 0.25f;
                 if (ySpeed < 1)
@@ -119,8 +84,8 @@ public class Enemy : MonoBehaviour
             var epicenter_e = PlanetObj.GetEpicenter(rb_e.transform.position);
             if (epicenter_e.HasValue && (rb_e.transform.position - PlanetObj.position).sqrMagnitude <= (epicenter_e.Value.point - PlanetObj.position).sqrMagnitude)
             {
-                var proj = Vector3.Project(rb_e.velocity, up);
-                var dot = Vector3.Dot(proj, up); //This will be positive if the projection is in the same general direction as the up vector
+                var proj = Vector3.Project(rb_e.velocity, or.up);
+                var dot = Vector3.Dot(proj, or.up); //This will be positive if the projection is in the same general direction as the up vector
                 var ySpeed_e = proj.magnitude;
                 if(dot > 0)
                 {
@@ -128,7 +93,7 @@ public class Enemy : MonoBehaviour
                 }
                 else
                 {
-                    rb_e.velocity -= 1.25f * ySpeed_e * up; //Invert ySpeed of e 
+                    rb_e.velocity -= 1.25f * ySpeed_e * or.up; //Invert ySpeed of e 
                     if (ySpeed_e < 1)
                     {
                         rb_e.transform.SetParent(transform);
@@ -136,8 +101,8 @@ public class Enemy : MonoBehaviour
                     }
                 }        
             }
-            rb.velocity += ySpeed * up;
-            rb_e.velocity += -gravityValue * up;
+            rb.velocity += ySpeed * or.up;
+            rb_e.velocity += -gravityValue * or.up;
         }
         else
         {
@@ -147,11 +112,11 @@ public class Enemy : MonoBehaviour
             var d = (s - t - Vector3.Project(s - t, t - PlanetObj.position)).normalized;
 
             
-            if (depth > -0.3f * transform.lossyScale.y)
+            if (or.depth > -0.3f * transform.lossyScale.y)
                 ySpeed = hopSpeedY;
             else
                 ySpeed -= gravityValue;
-            rb.velocity = ySpeed * up + new Vector3(groundSpeed * d.x, groundSpeed * d.y, groundSpeed * d.z);
+            rb.velocity = ySpeed * or.up + new Vector3(groundSpeed * d.x, groundSpeed * d.y, groundSpeed * d.z);
         }
 
         //Debug.DrawRay(epicenter.Value, rb.velocity, Color.black);
@@ -159,7 +124,7 @@ public class Enemy : MonoBehaviour
 
     void RotateBody()
     {
-        bodyRotation = Quaternion.Slerp(bodyRotation, Quaternion.LookRotation(-forward, normal), 0.8f);
+        bodyRotation = Quaternion.Slerp(bodyRotation, Quaternion.LookRotation(-or.forward, or.normal.Value), 0.8f);
         bodyAirRotationAmount += (-ySpeed / 2.8f - bodyAirRotationAmount) * 0.3f;
         var _bodyAirRotation = Quaternion.Euler(new Vector3(bodyAirRotationAmount, 0, 0));
         transform.rotation = bodyRotation * _bodyAirRotation;
@@ -176,7 +141,7 @@ public class Enemy : MonoBehaviour
             return;
 
         var wp = w.transform.position;
-        rb.velocity = (3 * w.rb.velocity.magnitude) * Vector3.Lerp((transform.position - wp).normalized, normal, 0.5f);
+        rb.velocity = (3 * w.rb.velocity.magnitude) * Vector3.Lerp((transform.position - wp).normalized, or.normal.Value, 0.5f);
         ySpeed = 0;
         ragdoll = true;
 
@@ -184,6 +149,6 @@ public class Enemy : MonoBehaviour
         transform.FindChild("EnemyHead").GetComponent<SphereCollider>().enabled = true;
         transform.FindChild("EnemyHead").SetParent(null);
         rb_e.isKinematic = false;
-        rb_e.velocity = (3 * w.rb.velocity.magnitude) * Vector3.Lerp((rb_e.transform.position - wp).normalized, normal, 0.5f);
+        rb_e.velocity = (3 * w.rb.velocity.magnitude) * Vector3.Lerp((rb_e.transform.position - wp).normalized, or.normal.Value, 0.5f);
     }
 }

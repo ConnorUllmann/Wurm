@@ -28,32 +28,24 @@ public class Worm : MonoBehaviour {
     public GameObject target;
     public GameObject debugSphere;
 
+    public Orientation or;
+    public Rigidbody rb;
+
     /* Updated every frame */
-    public Quaternion quatUp;
     public float groundSpeed;
-    public Vector3? epicenter;         //Position of the worm on the planet's surface.
-    public float? dEpicenter;          //Distance from the center of the planet to the surface at the position of the worm.
-    public float dCenter;              //Distance from center of the planet to the worm.
-    public Vector3 forward = Vector3.forward;            //Direction the worm is moving tangentially to the planet SPHERE
-    public Vector3 normal = Vector3.up;             //Direction of the surface at the epicenter;
-    public Vector3 facing = Vector3.forward;             //Direction of motion;
-    public Vector3 up = Vector3.up;                 //Direction from the center of the sphere up.
-    public Vector3 right = Vector3.right;           //Direction from the center of the sphere right.
-    public Vector3 diff = Vector3.zero;               //Vector from the planet to the worm.
     public float gravityValue;         //Amount of gravity (> 0)
-    public Rigidbody rb;               //The player's rigidbody
     public Vector3 vel = Vector3.zero;                //Velocity applied to the worm head.
     /***********************/
 
     public float depthTo;       //The depth that the worm will tween to when underground.
-    public float depth { get { if (!dEpicenter.HasValue) return float.MinValue; return dEpicenter.Value - dCenter; } } //positive means below-ground.
-    public bool underground {  get { if (!dEpicenter.HasValue) return false; return dCenter <= dEpicenter.Value; } }
     private bool undergroundLast = false;
 
     float nVelY = 1;
     float velYSignLast = 1;
     float velYSign = 1;
     float cameraSideToSideMult = 150;
+    Vector3 cameraAddNormal = new Vector3();
+    float cameraAddVal = 200;
 
     //Inputs
     float h_input;
@@ -71,6 +63,7 @@ public class Worm : MonoBehaviour {
 	// Use this for initialization
 	void Start ()
     {
+        or = new Orientation(gameObject, false);
         rb = GetComponent<Rigidbody>();
         foreach (Transform t0 in transform)
         {
@@ -98,51 +91,30 @@ public class Worm : MonoBehaviour {
     void FixedUpdate () {
         time += Time.deltaTime;
 
-        OrientSelf();
+        or.Update();
 
         //Debug.DrawRay(epicenter.Value, forward * 1000);
-        Debug.DrawRay(epicenter.Value, up * 1100, Color.blue);
-        Debug.DrawRay(epicenter.Value, right * 1000, Color.red);
-        Debug.DrawRay(transform.position, facing * 1000, Color.green);
+        Debug.DrawRay(or.epicenter.Value, or.up * 1100, Color.blue);
+        Debug.DrawRay(or.epicenter.Value, or.right * 1000, Color.red);
+        Debug.DrawRay(transform.position, or.facing * 1000, Color.green);
 
         UpdateMandibles();
 
         UpdateInputs();
 
         UpdateSpeed();
-        Debug.DrawRay(transform.position + new Vector3(5, 0, 0), quatUp * Vector3.forward * 1000, Color.yellow);
-        Debug.DrawRay(transform.position + new Vector3(0, 5, 0), quatUp * Vector3.up * 1000, Color.cyan);// 1000 * vel.normalized, Color.cyan);
-        Debug.DrawRay(transform.position, quatUp * Vector3.right * 1000, Color.magenta);
+        Debug.DrawRay(transform.position + new Vector3(5, 0, 0), or.quatUp * Vector3.forward * 1000, Color.yellow);
+        Debug.DrawRay(transform.position + new Vector3(0, 5, 0), or.quatUp * Vector3.up * 1000, Color.cyan);// 1000 * vel.normalized, Color.cyan);
+        Debug.DrawRay(transform.position, or.quatUp * Vector3.right * 1000, Color.magenta);
 
         UpdateCamera();
         UpdateBodyParts();
         DrawPositions();
 
-        transform.FindChild("Head").FindChild("HeadLight").position += (epicenter.Value + up * (underground ? 35 : 1) - transform.FindChild("Head").FindChild("HeadLight").position) * 0.1f;
+        transform.FindChild("Head").FindChild("HeadLight").position += (or.epicenter.Value + or.up * (or.underground ? 35 : 1) - transform.FindChild("Head").FindChild("HeadLight").position) * 0.1f;
 
-        undergroundLast = underground;
+        undergroundLast = or.underground;
         velYSignLast = velYSign;
-    }
-
-    //Sets all of the vectors and distance variables to orient the worm in the world.
-    //Returns the quaternion used to take local space coordinates and convert to world space.
-    void OrientSelf()
-    {
-        diff = transform.position - PlanetObj.S.transform.position;
-        up = diff.normalized;
-        dCenter = diff.magnitude;
-        facing = rb.velocity.normalized;
-        forward = (facing - Vector3.Project(facing, up)).normalized;
-        right = Vector3.Cross(up, facing);
-        quatUp = Quaternion.LookRotation(forward, up);
-
-        RaycastHit? hitInfo = PlanetObj.GetEpicenter(transform.position);
-        if (hitInfo != null)
-        {
-            epicenter = hitInfo.Value.point;
-            normal = hitInfo.Value.normal;
-            dEpicenter = (epicenter.Value - PlanetObj.S.transform.position).magnitude;
-        }
     }
 
     float angX;
@@ -153,23 +125,23 @@ public class Worm : MonoBehaviour {
             var nsin = (Mathf.Sin(time * 4 + 0.5f * Mathf.Sin(i % (mandibles.Count / 2)) * 2 * Mathf.PI / (mandibles.Count / 2)) + 1) / 2;
 
             var m = 100;
-            if (depth >= 0)
+            if (or.depth >= 0)
             {
                 angX += (mandibleAngleMax - angX) * 0.5f;
             }
-            else if (depth < -m)
+            else if (or.depth < -m)
             {
                 //Up in the air
                 angX = mandibleAngleMin;
             }
             else if(vel.y > 0)
             {
-                var n = depth / m + 1;
+                var n = or.depth / m + 1;
                 angX += ((mandibleAngleMax - mandibleAngleMin) * n + mandibleAngleMin - angX) * 0.5f;
             }
             else if(vel.y < 0)
             {
-                var n = depth / m + 1;
+                var n = or.depth / m + 1;
                 angX += ((mandibleAngleMax - mandibleAngleMin) * n + mandibleAngleMin - angX) * 0.5f;
             }
 
@@ -186,9 +158,9 @@ public class Worm : MonoBehaviour {
         Quaternion quatHead = head.transform.rotation;
         if (rb.velocity.sqrMagnitude > 1)
         {
-            head.transform.LookAt(head.transform.position + rb.velocity, up);
+            head.transform.LookAt(head.transform.position + rb.velocity, or.up);
             headRotation -= h_input * 2f;
-            if (depth > -transform.localScale.x * 20 && x_input && Mathf.Abs(h_input) <= 0.5f)
+            if (or.depth > -transform.localScale.x * 20 && x_input && Mathf.Abs(h_input) <= 0.5f)
                 headRotation += 35 * Mathf.Sin(Time.time * 5) / (Mathf.Sqrt(vel.x * vel.x + vel.z * vel.z) / minGroundSpeed);
             head.transform.Rotate(new Vector3(headRotation, 90, 90));
             quatHead = head.transform.rotation;
@@ -236,7 +208,7 @@ public class Worm : MonoBehaviour {
         //vel.x += 0.5f * Mathf.Sin(Time.time * Mathf.Sqrt(vel.x * vel.x + vel.z * vel.z) / minGroundSpeed);
 
 
-        if (underground)
+        if (or.underground)
         {
             if (z_input)
             {
@@ -248,7 +220,7 @@ public class Worm : MonoBehaviour {
                 }
             }
 
-            vel.y -= (depthTo - depth) * 0.25f;
+            vel.y -= (depthTo - or.depth) * 0.25f;
             //If the player is slowing down, slow the worm's vertical movement
             if (vel.y < 0)
             {
@@ -277,13 +249,13 @@ public class Worm : MonoBehaviour {
             groundSpeed = groundSpeedNormal;
         }
 
-        if (underground && vel.y < ySpeedMin)
+        if (or.underground && vel.y < ySpeedMin)
             vel.y = ySpeedMin;
         if (vel.y > ySpeedMax)
             vel.y = ySpeedMax;
         //vel.y = Utils.sign(vel.y) * Mathf.Min(Mathf.Abs(vel.y), ySpeedMax);
         
-        rb.velocity = quatUp * vel;
+        rb.velocity = or.quatUp * vel;
     }
 
     void UpdateCamera()
@@ -298,13 +270,14 @@ public class Worm : MonoBehaviour {
             }
         }
 
-        float _nVelY = Mathf.Pow(Mathf.Max(-depth, 0) / 100f, 0.1f);
-        nVelY = Mathf.Sin(Mathf.Max(-depth, 0) / 100f * Mathf.PI / 2);// += Utils.sign(_nVelY - nVelY) * 0.001f;
+        float _nVelY = Mathf.Pow(Mathf.Max(-or.depth, 0) / 100f, 0.1f);
+        nVelY = Mathf.Sin(Mathf.Max(-or.depth, 0) / 100f * Mathf.PI / 2);// += Utils.sign(_nVelY - nVelY) * 0.001f;
         var origin = transform.position;
-        if (underground && epicenter.HasValue)
-            origin = epicenter.Value;
-        Camera.main.transform.position += (origin + right * cameraSideToSideMult * nVelY + up * 400 - forward * (230 + 15 * Mathf.Sqrt(vel.x * vel.x + vel.z * vel.z) / minGroundSpeed) - Camera.main.transform.position) * 0.05f;
-        Camera.main.transform.LookAt(transform.position, up);
+        if (or.underground && or.epicenter.HasValue)
+            origin = or.epicenter.Value;
+        cameraAddNormal += (or.normal.Value.normalized - cameraAddNormal) * 0.5f;
+        Camera.main.transform.position += (origin + cameraAddNormal * cameraAddVal + or.right * cameraSideToSideMult * nVelY + or.up * 200 - or.forward * (230 + 15 * Mathf.Sqrt(vel.x * vel.x + vel.z * vel.z) / minGroundSpeed) - Camera.main.transform.position) * 0.05f;
+        Camera.main.transform.LookAt(transform.position, or.up);
     }
 
     //Draws a continuous line through all positions in the positions list.
