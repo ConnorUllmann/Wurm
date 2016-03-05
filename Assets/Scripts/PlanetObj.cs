@@ -5,7 +5,7 @@ public class PlanetObj : MonoBehaviour {
 
     public static PlanetObj S;
 
-    public GameObject player;
+    public GameObject _player;
 
     public float safeHeight;
 
@@ -37,4 +37,5 @@ public class PlanetObj : MonoBehaviour {
     }
 
     public static Vector3 position { get { return PlanetObj.S.transform.position; } set { PlanetObj.S.transform.position = value; } }
+    public static GameObject player { get { return PlanetObj.S._player; } set { PlanetObj.S._player = value; } }
 }

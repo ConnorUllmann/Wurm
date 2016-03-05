@@ -13,8 +13,9 @@ public class Enemy : MonoBehaviour
 
     private float offsetRand; //A random value 0..1 for this instance.
 
-    public GameObject target;
+    private GameObject target;
     public GameObject spearPrefab;
+    public GameObject bloodPrefab;
 
     public Orientation or;
     public Rigidbody rb;
@@ -108,7 +109,7 @@ public class Enemy : MonoBehaviour
         {
             groundSpeed = groundSpeedNormal;
             var t = transform.position;
-            var s = target.transform.position;
+            var s = target ? target.transform.position : PlanetObj.player.transform.position;
             var d = (s - t - Vector3.Project(s - t, t - PlanetObj.position)).normalized;
 
             
@@ -139,6 +140,10 @@ public class Enemy : MonoBehaviour
     {
         if (ragdoll)
             return;
+
+        var _blood = Instantiate<GameObject>(bloodPrefab);
+        _blood.transform.localScale *= (Random.value - 0.5f) + 1;
+        _blood.transform.position = transform.position;
 
         var wp = w.transform.position;
         rb.velocity = (3 * w.rb.velocity.magnitude) * Vector3.Lerp((transform.position - wp).normalized, or.normal.Value, 0.5f);

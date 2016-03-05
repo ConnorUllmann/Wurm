@@ -8,17 +8,16 @@ public class Breakable : MonoBehaviour
     public float velocityMultiplier = 0.5f;
     public float velocityMax = 200;
 
-    public GameObject breakablePrefab;
-    public GameObject bp;
+    public GameObject explosionPrefab;
 
     public int breaks;
     public int gravityBreakLimit; //Number of breaks remaining when the breakable will activate gravity.
 
-    public bool HasGravity { get { return  breaks <= gravityBreakLimit; } }
+    public bool HasGravity { get { return breaks <= gravityBreakLimit; } }
     public void SetBreaks(int _breaks)
     {
         breaks = _breaks;
-        if (breaks <= gravityBreakLimit)
+        if (HasGravity)
         {
             GetComponent<Rigidbody>().isKinematic = false;
         }
@@ -28,21 +27,6 @@ public class Breakable : MonoBehaviour
     void Start()
     {
         SetBreaks(breaks);
-        if (breaks > 0)
-        {
-            bp = Instantiate<GameObject>(breakablePrefab);
-            bp.SetActive(false);
-            foreach (Transform t in bp.transform)
-            {
-                var pos = t.position;
-                pos.x *= transform.lossyScale.x;
-                pos.y *= transform.lossyScale.y;
-                pos.z *= transform.lossyScale.z;
-                t.position = pos;
-                t.localScale = transform.lossyScale;
-                t.GetComponent<Breakable>().enabled = true;
-            }
-        }
     }
 
     // Update is called once per frame
@@ -54,9 +38,9 @@ public class Breakable : MonoBehaviour
         {
             rb.velocity += -gravityValue * diff.normalized;
         }
-        var epi = PlanetObj.GetEpicenter(transform.position);
-        //if (!epi.HasValue || diff.magnitude <= (epi.Value.point - PlanetObj.position).magnitude - maximalElement(transform.lossyScale))
-       //     Destroy(this.gameObject);
+        /*var epi = PlanetObj.GetEpicenter(transform.position);
+        if (diff.magnitude <= (epi.Value.point - PlanetObj.position).magnitude)
+             transform.position = epi.Value.point;*/
     }
 
     void OnCollisionEnter(Collision collisionInfo)
@@ -64,27 +48,52 @@ public class Breakable : MonoBehaviour
         //Physics.IgnoreCollision(collisionInfo.collider, this.GetComponent<Collider>());
     }
 
-    public void BreakUp(GameObject breaker=null)
+    public void BreakUp(GameObject breaker = null)
     {
         if (breaks > 0)
         {
-            bp.SetActive(true);
-            bp.transform.position = transform.position;
-            bp.transform.rotation = transform.rotation;
-            foreach (Transform t in bp.transform)
+            for(int i = -1; i <= 1; i += 2)
             {
-                t.GetComponent<Breakable>().SetBreaks(breaks - 1);
-                if (t.GetComponent<Breakable>().HasGravity)
+                for (int j = -1; j <= 1; j += 2)
                 {
-                    if (breaker && breaker.GetComponent<Rigidbody>())
+                    for (int k = -1; k <= 1; k += 2)
                     {
-                        t.GetComponent<Rigidbody>().velocity -= (transform.position - breaker.transform.position).normalized * breaker.GetComponent<Rigidbody>().velocity.magnitude * velocityMultiplier;
-                        t.GetComponent<Rigidbody>().velocity = Mathf.Min(t.GetComponent<Rigidbody>().velocity.magnitude, velocityMax) * t.GetComponent<Rigidbody>().velocity.normalized;
+                        var b = Instantiate<GameObject>(gameObject);
+                        b.transform.localScale = transform.lossyScale * 0.5f;
+                        var pos = new Vector3(i, j, k) * 0.5f;
+                        pos.x *= b.transform.localScale.x;
+                        pos.y *= b.transform.localScale.y;
+                        pos.z *= b.transform.localScale.z;
+                        b.transform.position = transform.position + pos;
+
+                        b.GetComponent<Breakable>().enabled = true;
+                        b.GetComponent<Breakable>().SetBreaks(breaks - 1);
+                        if (b.GetComponent<Breakable>().HasGravity)
+                        {
+                            if (breaker && breaker.GetComponent<Rigidbody>())
+                            {
+                                b.GetComponent<Rigidbody>().velocity -= (transform.position - breaker.transform.position).normalized * breaker.GetComponent<Rigidbody>().velocity.magnitude * velocityMultiplier;
+                                b.GetComponent<Rigidbody>().velocity = Mathf.Min(b.GetComponent<Rigidbody>().velocity.magnitude, velocityMax) * b.GetComponent<Rigidbody>().velocity.normalized;
+                            }
+                        }
                     }
                 }
             }
+
+            int num = (int)(1 + (Random.value) * 3);
+            for (int i = 0; i < num; i++)
+            {
+                var explosion = Instantiate<GameObject>(explosionPrefab);
+                var pos = transform.lossyScale;
+                var sphere = Random.insideUnitSphere;
+                pos.x *= sphere.x;
+                pos.y *= sphere.y;
+                pos.z *= sphere.z;
+                explosion.transform.position = transform.position + pos;
+                explosion.GetComponent<Explosion>().scale = explosion.transform.localScale = maximalElement(transform.lossyScale) * Vector3.one * (Random.value + 1) / 10f;
+            }
             breaks = 0;
-            Destroy(this.gameObject);
+            Destroy(gameObject);
         }
         else
         {
