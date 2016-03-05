@@ -309,6 +309,10 @@ public class Worm : MonoBehaviour {
         {
             c.GetComponent<Spear>().Hit(transform, true);
         }
+        else if (c.gameObject.tag == "Home")
+        {
+            c.transform.parent.GetComponent<Home>().Hit();
+        }
     }
 
     float Filter(float t)
